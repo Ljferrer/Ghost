@@ -5,6 +5,7 @@ This README documents the process of rap lyric acquisition and preparing the dat
 * Artist List: [Wikipedia Top Hip Hop Musicians](https://en.wikipedia.org/wiki/List_of_hip_hop_musicians)
 * Lyrics Source: [Genius.com](https://genius.com)
 * Means of Acquisition: [LyricsGenius pip package](https://github.com/johnwmillr/LyricsGenius)
+* Scraping Protocol: [Script used to download lyrics](https://github.com/Ljferrer/Ghost/blob/master/data/ScrapeRappers.ipynb) 
 
 Notes to be aware of:  
 * Sometimes the artist names from Wikipedia's list are automatically changed by LyricsGenius
