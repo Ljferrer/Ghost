@@ -17,7 +17,7 @@ Notes to be aware of:
 ## Data Cleaning & Tokenization:
 
 ## Artist Vocabulary Analysis:
-Reference `data/WikipediaRapArtists.txt` for full, alphabetized list of artists in lyrics dataset. 
+Reference [`data/WikipediaRapArtists.txt`](https://github.com/Ljferrer/Ghost/blob/master/data/WikipediaRapArtists.txt) for full, alphabetized list of artists in lyrics dataset. 
 
 ### Gucci Mane
 * n Songs: `1068`
