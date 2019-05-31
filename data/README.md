@@ -20,21 +20,21 @@ Notes to be aware of:
 Reference `data/WikipediaRapArtists.txt` for full, alphabetized list of artists in lyrics dataset. 
 
 ### Gucci Mane
-* n Songs: 
+* n Songs: `1068`
 * Release Dates:
 * Vocabulary Size: 
 * Term Frequency Histogram: 
 * Key Term Dispersion Plot: 
 
 ### Eminem
-* n Songs: 
+* n Songs: `458`
 * Release Dates:
 * Vocabulary Size: 
 * Term Frequency Histogram: 
 * Key Term Dispersion Plot: 
 
 ### Jay Z
-* n Songs: 
+* n Songs: `371`
 * Release Dates:
 * Vocabulary Size: 
 * Term Frequency Histogram: 
