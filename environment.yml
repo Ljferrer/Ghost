@@ -14,6 +14,7 @@ dependencies:
     - numpy
     - lyricsgenius
     - yellowbrick
+    - sqlitedict
     - pytorch-pretrained-bert
     - ipykernel
     - jupyter
