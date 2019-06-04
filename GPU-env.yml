@@ -13,6 +13,8 @@ dependencies:
   - fastai
   - pip:
     - numpy
+    - spacy
+    - spacy-langdetect
     - lyricsgenius
     - yellowbrick
     - sqlitedict

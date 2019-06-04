@@ -18,6 +18,7 @@ CPU Env:
 conda env create .
 . activate GG
 ipython kernel install --user --name=GG
+python -m spacy download "en"
 ```
 
 GPU Env:
@@ -25,4 +26,6 @@ GPU Env:
 conda env create GPU-env.yml
 . activate GGPU
 ipython kernel install --user --name=GGPU
+python -m spacy download "en"
 ```
+
