@@ -11,3 +11,18 @@ Using [1362 Hip Hop artists metioned on Wikipedia](https://en.wikipedia.org/wiki
 - Inspiration: [Kevin Knight's Poetry Generator](https://aclweb.org/anthology/P17-4008.pdf)
 - BERT: [Original Paper](https://arxiv.org/abs/1810.04805), [Explained](https://towardsdatascience.com/bert-explained-state-of-the-art-language-model-for-nlp-f8b21a9b6270), [PyTorch Implementation](https://github.com/huggingface/pytorch-pretrained-BERT)
 - Genius API: [Client](https://genius.com/api-clients)
+
+### Compute Env:
+CPU Env:
+```bash
+conda env create .
+. activate GG
+ipython kernel install --user --name=GG
+```
+
+GPU Env:
+```bash
+conda env create GPU-env.yml
+. activate GGPU
+ipython kernel install --user --name=GGPU
+```
