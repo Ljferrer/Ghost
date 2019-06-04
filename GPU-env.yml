@@ -1,0 +1,22 @@
+name: GGPU
+channels:
+  - conda-forge
+  - defaults
+  - pytorch
+  - fastai
+dependencies:
+  - python=3.7
+  - pip>=19.1.1
+  - pytorch
+  - torchvision
+  - cudatoolkit=10.0
+  - fastai
+  - pip:
+    - numpy
+    - lyricsgenius
+    - yellowbrick
+    - pytorch-pretrained-bert
+    - ipykernel
+    - jupyter
+    - jupyterlab
+
