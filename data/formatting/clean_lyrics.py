@@ -1,10 +1,13 @@
 import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import tqdm
 
 from pathlib import Path
 from argparse import ArgumentParser
 
-from .lyric_formatter import LyricGeniusFormatter
+from lyric_formatter import *   # Only imports LyricGeniusFormatter class
 
 
 def main():
@@ -19,7 +22,8 @@ def main():
     arp.add_argument('-t', '--tokenizer-type',
                      default='bert-base-uncased',
                      choices=['bert-base-uncased', 'bert-large-uncased', 'bert-base-cased'],
-                     help='Make sure tokenizer type matches model type')
+                     help='Make sure tokenizer type matches downstream model type!'
+                          '(Default = bert-base-uncased)')
     # TODO: Specify train/test/dev split in arp
     opts = arp.parse_args()
 
