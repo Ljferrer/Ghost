@@ -366,7 +366,7 @@ def main():
                 dev_pbar.set_postfix_str(f"Loss: {mean_dev_loss:.5f}")
         dev_loss_history.append((epoch, mean_dev_loss))     # Only collect final mean dev loss
 
-        if epoch % 5 == 0:
+        if epoch % 3 == 0:
             # TODO: Print loss trajectory
 
             # Save progress
@@ -377,6 +377,11 @@ def main():
                         'optimizer_state_dict': optimizer.state_dict(),
                         'loss': tr_loss,
                         }, str(output_model_file))
+
+    # Save loss history
+    with open(args.output_dir / "loss_history.json", 'a') as h:
+        hist = {'dev': dev_loss_history, 'train': train_loss_history}
+        h.write(f"{json.dumps(hist)}\n")
 
     # Save a trained model
     logging.info("** ** * Saving fine-tuned model * ** ** ")
