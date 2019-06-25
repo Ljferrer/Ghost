@@ -82,7 +82,7 @@ class DocumentDatabase:
 
 
 def truncate_seq_pair(tokens_a, tokens_b, max_num_tokens):
-    """Truncates a pair of sequences to a maximum sequence length. Lifted from Google's BERT repo."""
+    '''Truncates a pair of sequences to a maximum sequence length. Lifted from Google's BERT repo.'''
     while True:
         total_length = len(tokens_a) + len(tokens_b)
         if total_length <= max_num_tokens:
@@ -100,11 +100,11 @@ def truncate_seq_pair(tokens_a, tokens_b, max_num_tokens):
 
 
 def create_masked_lm_predictions(tokens, masked_lm_prob, max_predictions_per_seq, vocab_list):
-    """Creates the predictions for the masked LM objective. This is mostly copied from the Google BERT repo, but
-    with several refactors to clean it up and remove a lot of unnecessary variables."""
+    '''Creates the predictions for the masked LM objective. This is mostly copied from the Google BERT repo, but
+    with several refactors to clean it up and remove a lot of unnecessary variables.'''
     cand_indices = []
     for (i, token) in enumerate(tokens):
-        if token == "[CLS]" or token == "[SEP]":
+        if token == '[CLS]' or token == '[SEP]':
             continue
         cand_indices.append(i)
 
@@ -116,7 +116,7 @@ def create_masked_lm_predictions(tokens, masked_lm_prob, max_predictions_per_seq
     for index in mask_indices:
         # 80% of the time, replace with [MASK]
         if random() < 0.8:
-            masked_token = "[MASK]"
+            masked_token = '[MASK]'
         else:
             # 10% of the time, keep original
             if random() < 0.5:
@@ -134,10 +134,10 @@ def create_masked_lm_predictions(tokens, masked_lm_prob, max_predictions_per_seq
 def create_instances_from_document(
         doc_database, doc_idx, max_seq_length, short_seq_prob,
         masked_lm_prob, max_predictions_per_seq, vocab_list):
-    """This code is mostly a duplicate of the equivalent function from Google BERT's repo.
+    '''This code is mostly a duplicate of the equivalent function from Google BERT's repo.
     However, we make some changes and improvements. Sampling is improved and no longer requires a loop in this function.
     Also, documents are sampled proportionally to the number of sentences they contain, which means each sentence
-    (rather than each document) has an equal chance of being sampled as a false example for the NextSentence task."""
+    (rather than each document) has an equal chance of being sampled as a false example for the NextSentence task.'''
     document = doc_database[doc_idx]
     # Account for [CLS] ([SEP] tokens were already added between each line)
     max_num_tokens = max_seq_length - 3
@@ -158,7 +158,7 @@ def create_instances_from_document(
     # We DON'T just concatenate all of the tokens from a document into a long
     # sequence and choose an arbitrary split point because this would make the
     # next sentence prediction task too easy. Instead, we split the input into
-    # segments "A" and "B" based on the actual "sentences" provided by the user
+    # segments 'A' and 'B' based on the actual 'sentences' provided by the user
     # input.
     instances = []
     current_chunk = []
@@ -195,7 +195,7 @@ def create_instances_from_document(
                         tokens_b.extend(random_document[j])
                         if len(tokens_b) >= target_b_length:
                             break
-                    # We didn't actually use these segments so we "put them back" so
+                    # We didn't actually use these segments so we 'put them back' so
                     # they don't go to waste.
                     num_unused_segments = len(current_chunk) - a_end
                     i -= num_unused_segments
@@ -213,7 +213,7 @@ def create_instances_from_document(
                 #       but they may have been truncated
                 tokens_a = tokens_a + ['[SEP]'] if '[SEP]' not in tokens_a[-1] else tokens_a
                 tokens_b = tokens_b + ['[SEP]'] if '[SEP]' not in tokens_b[-1] else tokens_b
-                tokens = ["[CLS]"] + tokens_a + tokens_b
+                tokens = ['[CLS]'] + tokens_a + tokens_b
                 # Range +1 [CLS] token
                 segment_ids = [0 for _ in range(len(tokens_a) + 1)] + [1 for _ in range(len(tokens_b))]
                 assert len(tokens) == len(segment_ids), 'Len mismatch'
@@ -222,11 +222,11 @@ def create_instances_from_document(
                     tokens, masked_lm_prob, max_predictions_per_seq, vocab_list)
 
                 instance = {
-                    "tokens": tokens,
-                    "segment_ids": segment_ids,
-                    "is_random_next": is_random_next,
-                    "masked_lm_positions": masked_lm_positions,
-                    "masked_lm_labels": masked_lm_labels}
+                    'tokens': tokens,
+                    'segment_ids': segment_ids,
+                    'is_random_next': is_random_next,
+                    'masked_lm_positions': masked_lm_positions,
+                    'masked_lm_labels': masked_lm_labels}
                 instances.append(instance)
             current_chunk = []
             current_length = 0
@@ -238,24 +238,24 @@ def create_instances_from_document(
 def main():
     parser = ArgumentParser()
     parser.add_argument('--train_corpus', type=Path, required=True)
-    parser.add_argument("--output_dir", type=Path, required=True)
-    parser.add_argument("--bert_model", type=str, required=True,
-                        choices=["bert-base-uncased", "bert-large-uncased", "bert-base-cased",
-                                 "bert-base-multilingual", "bert-base-chinese"])
-    parser.add_argument("--do_lower_case", action="store_true")
+    parser.add_argument('--output_dir', type=Path, required=True)
+    parser.add_argument('--bert_model', type=str, required=True,
+                        choices=['bert-base-uncased', 'bert-large-uncased', 'bert-base-cased',
+                                 'bert-base-multilingual', 'bert-base-chinese'])
+    parser.add_argument('--do_lower_case', action='store_true')
 
-    parser.add_argument("--reduce_memory", action="store_true",
-                        help="Reduce memory usage for large datasets by keeping data on disc rather than in memory")
+    parser.add_argument('--reduce_memory', action='store_true',
+                        help='Reduce memory usage for large datasets by keeping data on disc rather than in memory')
 
-    parser.add_argument("--epochs_to_generate", type=int, default=3,
-                        help="Number of epochs of data to pregenerate")
-    parser.add_argument("--max_seq_len", type=int, default=128)
-    parser.add_argument("--short_seq_prob", type=float, default=0.1,
-                        help="Probability of making a short sentence as a training example")
-    parser.add_argument("--masked_lm_prob", type=float, default=0.15,
-                        help="Probability of masking each token for the LM task")
-    parser.add_argument("--max_predictions_per_seq", type=int, default=20,
-                        help="Maximum number of tokens to mask in each sequence")
+    parser.add_argument('--epochs_to_generate', type=int, default=3,
+                        help='Number of epochs of data to pregenerate')
+    parser.add_argument('--max_seq_len', type=int, default=128)
+    parser.add_argument('--short_seq_prob', type=float, default=0.1,
+                        help='Probability of making a short sentence as a training example')
+    parser.add_argument('--masked_lm_prob', type=float, default=0.15,
+                        help='Probability of masking each token for the LM task')
+    parser.add_argument('--max_predictions_per_seq', type=int, default=20,
+                        help='Maximum number of tokens to mask in each sequence')
 
     args = parser.parse_args()
 
@@ -264,9 +264,9 @@ def main():
     with DocumentDatabase(reduce_memory=args.reduce_memory) as docs:
         with args.train_corpus.open() as f:
             doc = []
-            for line in tqdm(f, desc="Loading Dataset", unit=" lines"):
+            for line in tqdm(f, desc='Loading Dataset', unit=' lines'):
                 line = line.strip()
-                if line == "":
+                if line == '':
                     docs.add_document(doc)
                     doc = []
                 else:
@@ -275,18 +275,18 @@ def main():
             if doc:
                 docs.add_document(doc)  # If the last doc didn't end on a newline, make sure it still gets added
         if len(docs) <= 1:
-            exit("ERROR: No document breaks were found in the input file! These are necessary to allow the script to "
-                 "ensure that random NextSentences are not sampled from the same document. Please add blank lines to "
-                 "indicate breaks between documents in your input file. If your dataset does not contain multiple "
-                 "documents, blank lines can be inserted at any natural boundary, such as the ends of chapters, "
-                 "sections or paragraphs.")
+            exit('ERROR: No document breaks were found in the input file! These are necessary to allow the script to '
+                 'ensure that random NextSentences are not sampled from the same document. Please add blank lines to '
+                 'indicate breaks between documents in your input file. If your dataset does not contain multiple '
+                 'documents, blank lines can be inserted at any natural boundary, such as the ends of chapters, '
+                 'sections or paragraphs.')
 
         args.output_dir.mkdir(exist_ok=True)
-        for epoch in trange(args.epochs_to_generate, desc="Epoch"):
-            epoch_filename = args.output_dir / f"epoch_{epoch}.json"
+        for epoch in trange(args.epochs_to_generate, desc='Epoch'):
+            epoch_filename = args.output_dir / f'epoch_{epoch}.json'
             num_instances = 0
             with epoch_filename.open('w') as epoch_file:
-                for doc_idx in trange(len(docs), desc="Document"):
+                for doc_idx in trange(len(docs), desc='Document'):
                     doc_instances = create_instances_from_document(
                         docs, doc_idx, max_seq_length=args.max_seq_len, short_seq_prob=args.short_seq_prob,
                         masked_lm_prob=args.masked_lm_prob, max_predictions_per_seq=args.max_predictions_per_seq,
@@ -295,11 +295,11 @@ def main():
                     for instance in doc_instances:
                         epoch_file.write(instance + '\n')
                         num_instances += 1
-            metrics_file = args.output_dir / f"epoch_{epoch}_metrics.json"
+            metrics_file = args.output_dir / f'epoch_{epoch}_metrics.json'
             with metrics_file.open('w') as metrics_file:
                 metrics = {
-                    "num_training_examples": num_instances,
-                    "max_seq_len": args.max_seq_len
+                    'num_training_examples': num_instances,
+                    'max_seq_len': args.max_seq_len
                 }
                 metrics_file.write(json.dumps(metrics))
 

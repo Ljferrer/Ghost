@@ -16,18 +16,18 @@ from pytorch_pretrained_bert.modeling import BertForPreTraining
 from pytorch_pretrained_bert.tokenization import BertTokenizer
 from pytorch_pretrained_bert.optimization import BertAdam, WarmupLinearSchedule
 
-InputFeatures = namedtuple("InputFeatures", "input_ids input_mask segment_ids lm_label_ids is_next")
+InputFeatures = namedtuple('InputFeatures', 'input_ids input_mask segment_ids lm_label_ids is_next')
 
 log_format = '%(asctime)-10s: %(message)s'
 logging.basicConfig(level=logging.INFO, format=log_format)
 
 
 def convert_example_to_features(example, tokenizer, max_seq_length):
-    tokens = example["tokens"]
-    segment_ids = example["segment_ids"]
-    is_random_next = example["is_random_next"]
-    masked_lm_positions = example["masked_lm_positions"]
-    masked_lm_labels = example["masked_lm_labels"]
+    tokens = example['tokens']
+    segment_ids = example['segment_ids']
+    is_random_next = example['is_random_next']
+    masked_lm_positions = example['masked_lm_positions']
+    masked_lm_labels = example['masked_lm_labels']
 
     assert len(tokens) == len(segment_ids) <= max_seq_length, f'Tokens: {len(tokens)} SegIDs: {len(segment_ids)}'
     input_ids = tokenizer.convert_tokens_to_ids(tokens)
@@ -60,8 +60,8 @@ class PregeneratedDataset(Dataset):
         self.tokenizer = tokenizer
         self.epoch = epoch
         self.data_epoch = epoch % num_data_epochs
-        data_file = training_path / f"epoch_{self.data_epoch}.json"
-        metrics_file = training_path / f"epoch_{self.data_epoch}_metrics.json"
+        data_file = training_path / f'epoch_{self.data_epoch}.json'
+        metrics_file = training_path / f'epoch_{self.data_epoch}_metrics.json'
         assert data_file.is_file() and metrics_file.is_file()
         metrics = json.loads(metrics_file.read_text())
         num_samples = metrics['num_training_examples']
@@ -88,9 +88,9 @@ class PregeneratedDataset(Dataset):
             segment_ids = np.zeros(shape=(num_samples, seq_len), dtype=np.bool)
             lm_label_ids = np.full(shape=(num_samples, seq_len), dtype=np.int32, fill_value=-1)
             is_nexts = np.zeros(shape=(num_samples,), dtype=np.bool)
-        logging.info(f"Loading {train_or_dev} examples for epoch {epoch}")
+        logging.info(f'Loading {train_or_dev} examples for epoch {epoch}')
         with data_file.open() as f:
-            for i, line in enumerate(tqdm(f, total=num_samples, desc="Training examples")):
+            for i, line in enumerate(tqdm(f, total=num_samples, desc='Training examples')):
                 line = line.strip()
                 example = json.loads(line)
                 features = convert_example_to_features(example, tokenizer, seq_len)
@@ -100,7 +100,7 @@ class PregeneratedDataset(Dataset):
                 lm_label_ids[i] = features.lm_label_ids
                 is_nexts[i] = features.is_next
         assert i == num_samples - 1  # Assert that the sample count metric was true
-        logging.info("Loading complete!")
+        logging.info('Loading complete!')
         self.num_samples = num_samples
         self.seq_len = seq_len
         self.input_ids = input_ids
@@ -125,85 +125,85 @@ def main():
     parser.add_argument('--pregenerated_training_data', type=Path, required=True)
     parser.add_argument('--pregenerated_dev_data', type=Path, required=True)
     parser.add_argument('--output_dir', type=Path, required=True)
-    parser.add_argument("--bert_model", type=str, required=True, help="Bert pre-trained model selected in the list: bert-base-uncased, "
-                             "bert-large-uncased, bert-base-cased, bert-base-multilingual, bert-base-chinese.")
-    parser.add_argument("--do_lower_case", action="store_true")
-    parser.add_argument("--reduce_memory", action="store_true",
-                        help="Store training data as on-disc memmaps to massively reduce memory usage")
+    parser.add_argument('--bert_model', type=str, required=True, help='Bert pre-trained model selected in the list: bert-base-uncased, '
+                             'bert-large-uncased, bert-base-cased, bert-base-multilingual, bert-base-chinese.')
+    parser.add_argument('--do_lower_case', action='store_true')
+    parser.add_argument('--reduce_memory', action='store_true',
+                        help='Store training data as on-disc memmaps to massively reduce memory usage')
 
-    parser.add_argument("--epochs", type=int, default=3, help="Number of epochs to train for")
-    parser.add_argument("--local_rank",
+    parser.add_argument('--epochs', type=int, default=3, help='Number of epochs to train for')
+    parser.add_argument('--local_rank',
                         type=int,
                         default=-1,
-                        help="local_rank for distributed training on gpus")
-    parser.add_argument("--no_cuda",
+                        help='local_rank for distributed training on gpus')
+    parser.add_argument('--no_cuda',
                         action='store_true',
-                        help="Whether not to use CUDA when available")
+                        help='Whether not to use CUDA when available')
     parser.add_argument('--gradient_accumulation_steps',
                         type=int,
                         default=1,
-                        help="Number of updates steps to accumulate before performing a backward/update pass.")
-    parser.add_argument("--train_batch_size",
+                        help='Number of updates steps to accumulate before performing a backward/update pass.')
+    parser.add_argument('--train_batch_size',
                         default=32,
                         type=int,
-                        help="Total batch size for training.")
+                        help='Total batch size for training.')
     parser.add_argument('--fp16',
                         action='store_true',
-                        help="Whether to use 16-bit float precision instead of 32-bit")
+                        help='Whether to use 16-bit float precision instead of 32-bit')
     parser.add_argument('--loss_scale',
                         type=float, default=0,
-                        help="Loss scaling to improve fp16 numeric stability. Only used when fp16 set to True.\n"
-                        "0 (default value): dynamic loss scaling.\n"
-                        "Positive power of 2: static loss scaling value.\n")
-    parser.add_argument("--warmup_proportion",
+                        help='Loss scaling to improve fp16 numeric stability. Only used when fp16 set to True.\n'
+                        '0 (default value): dynamic loss scaling.\n'
+                        'Positive power of 2: static loss scaling value.\n')
+    parser.add_argument('--warmup_proportion',
                         default=0.1,
                         type=float,
-                        help="Proportion of training to perform linear learning rate warmup for. "
-                             "E.g., 0.1 = 10%% of training.")
-    parser.add_argument("--learning_rate",
+                        help='Proportion of training to perform linear learning rate warmup for. '
+                             'E.g., 0.1 = 10%% of training.')
+    parser.add_argument('--learning_rate',
                         default=3e-5,
                         type=float,
-                        help="The initial learning rate for Adam.")
+                        help='The initial learning rate for Adam.')
     parser.add_argument('--seed',
                         type=int,
                         default=42,
-                        help="random seed for initialization")
+                        help='random seed for initialization')
     args = parser.parse_args()
 
     assert args.pregenerated_training_data.is_dir(), \
-        "--pregenerated_training_data should point to the folder of files made by pregenerate_training_data.py!"
+        '--pregenerated_training_data should point to the folder of files made by pregenerate_training_data.py!'
 
     samples_per_epoch = []
     for i in range(args.epochs):
-        epoch_file = args.pregenerated_training_data / f"epoch_{i}.json"
-        metrics_file = args.pregenerated_training_data / f"epoch_{i}_metrics.json"
+        epoch_file = args.pregenerated_training_data / f'epoch_{i}.json'
+        metrics_file = args.pregenerated_training_data / f'epoch_{i}_metrics.json'
         if epoch_file.is_file() and metrics_file.is_file():
             metrics = json.loads(metrics_file.read_text())
             samples_per_epoch.append(metrics['num_training_examples'])
         else:
             if i == 0:
-                exit("No training data was found!")
-            print(f"Warning! There are fewer epochs of pregenerated data ({i}) than training epochs ({args.epochs}).")
-            print("This script will loop over the available data, but training diversity may be negatively impacted.")
+                exit('No training data was found!')
+            print(f'Warning! There are fewer epochs of pregenerated data ({i}) than training epochs ({args.epochs}).')
+            print('This script will loop over the available data, but training diversity may be negatively impacted.')
             num_data_epochs = i
             break
     else:
         num_data_epochs = args.epochs
 
     if args.local_rank == -1 or args.no_cuda:
-        device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+        device = torch.device('cuda' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
         n_gpu = torch.cuda.device_count()
     else:
         torch.cuda.set_device(args.local_rank)
-        device = torch.device("cuda", args.local_rank)
+        device = torch.device('cuda', args.local_rank)
         n_gpu = 1
         # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
         torch.distributed.init_process_group(backend='nccl')
-    logging.info("device: {} n_gpu: {}, distributed training: {}, 16-bits training: {}".format(
+    logging.info('device: {} n_gpu: {}, distributed training: {}, 16-bits training: {}'.format(
         device, n_gpu, bool(args.local_rank != -1), args.fp16))
 
     if args.gradient_accumulation_steps < 1:
-        raise ValueError("Invalid gradient_accumulation_steps parameter: {}, should be >= 1".format(
+        raise ValueError('Invalid gradient_accumulation_steps parameter: {}, should be >= 1'.format(
                             args.gradient_accumulation_steps))
 
     args.train_batch_size = args.train_batch_size // args.gradient_accumulation_steps
@@ -215,7 +215,7 @@ def main():
         torch.cuda.manual_seed_all(args.seed)
 
     if args.output_dir.is_dir() and list(args.output_dir.iterdir()):
-        logging.warning(f"Output directory ({args.output_dir}) already exists and is not empty!")
+        logging.warning(f'Output directory ({args.output_dir}) already exists and is not empty!')
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
@@ -240,7 +240,7 @@ def main():
             from apex.parallel import DistributedDataParallel as DDP
         except ImportError:
             raise ImportError(
-                "Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")
+                'Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.')
         model = DDP(model)
     elif n_gpu > 1:
         model = torch.nn.DataParallel(model)
@@ -260,7 +260,7 @@ def main():
             from apex.optimizers import FusedAdam
         except ImportError:
             raise ImportError(
-                "Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")
+                'Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.')
 
         optimizer = FusedAdam(optimizer_grouped_parameters,
                               lr=args.learning_rate,
@@ -284,10 +284,10 @@ def main():
 
     # Start training
     global_step = 0
-    logging.info("***** Running training *****")
-    logging.info(f"  Num examples = {total_train_examples}")
-    logging.info(f"  Batch size = {args.train_batch_size}")
-    logging.info(f"  Num steps = {num_train_optimization_steps} \n")
+    logging.info('***** Running training *****')
+    logging.info(f'  Num examples = {total_train_examples}')
+    logging.info(f'  Batch size = {args.train_batch_size}')
+    logging.info(f'  Num steps = {num_train_optimization_steps} \n')
     for epoch in range(args.epochs):
         # Train model
         model.train()
@@ -301,7 +301,7 @@ def main():
         train_dataloader = DataLoader(epoch_dataset, sampler=train_sampler, batch_size=args.train_batch_size)
         tr_loss = 0
         nb_tr_examples, nb_tr_steps = 0, 0
-        with tqdm(total=len(train_dataloader), desc=f"Epoch {epoch}") as train_pbar:
+        with tqdm(total=len(train_dataloader), desc=f'Epoch {epoch}') as train_pbar:
             for step, batch in enumerate(train_dataloader):
                 batch = tuple(t.to(device) for t in batch)
                 input_ids, input_mask, segment_ids, lm_label_ids, is_next = batch
@@ -321,7 +321,7 @@ def main():
                 mean_train_loss = tr_loss * args.gradient_accumulation_steps / nb_tr_steps
                 if step % 10 == 0:
                     train_loss_history.append((epoch, mean_train_loss))
-                train_pbar.set_postfix_str(f"Loss: {mean_train_loss:.5f}")
+                train_pbar.set_postfix_str(f'Loss: {mean_train_loss:.5f}')
                 if (step + 1) % args.gradient_accumulation_steps == 0:
                     if args.fp16:
                         # modify learning rate with special warm up BERT uses
@@ -345,7 +345,7 @@ def main():
         dev_dataloader = DataLoader(dev_dataset, sampler=train_sampler, batch_size=args.train_batch_size)
         dev_loss = 0
         nb_dev_examples, nb_dev_steps = 0, 0
-        with tqdm(total=len(dev_dataloader), desc=f"Epoch {epoch}") as dev_pbar:
+        with tqdm(total=len(dev_dataloader), desc=f'Epoch {epoch}') as dev_pbar:
             for step, batch in enumerate(dev_dataloader):
                 batch = tuple(t.to(device) for t in batch)
                 input_ids, input_mask, segment_ids, lm_label_ids, is_next = batch
@@ -363,15 +363,15 @@ def main():
                 nb_dev_steps += 1
                 dev_pbar.update(1)
                 mean_dev_loss = dev_loss * args.gradient_accumulation_steps / nb_dev_steps
-                dev_pbar.set_postfix_str(f"Loss: {mean_dev_loss:.5f}")
+                dev_pbar.set_postfix_str(f'Loss: {mean_dev_loss:.5f}')
         dev_loss_history.append((epoch, mean_dev_loss))     # Only collect final mean dev loss
 
         if epoch % 3 == 0:
             # TODO: Print loss trajectory
 
             # Save progress
-            logging.info("** ** * Saving model progress * ** ** \n")
-            output_model_file = args.output_dir / f"{epoch}_model.bin"
+            logging.info('** ** * Saving model progress * ** ** \n')
+            output_model_file = args.output_dir / f'{epoch}_model.bin'
             torch.save({'epoch': epoch,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
@@ -379,14 +379,14 @@ def main():
                         }, str(output_model_file))
 
     # Save loss history
-    with open(args.output_dir / "loss_history.json", 'a') as h:
+    with open(args.output_dir / 'loss_history.json', 'a') as h:
         hist = {'dev': dev_loss_history, 'train': train_loss_history}
-        h.write(f"{json.dumps(hist)}\n")
+        h.write(f'{json.dumps(hist)}\n')
 
     # Save a trained model
-    logging.info("** ** * Saving fine-tuned model * ** ** ")
+    logging.info('** ** * Saving fine-tuned model * ** ** ')
     model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
-    output_model_file = args.output_dir / "final_model.bin"
+    output_model_file = args.output_dir / 'final_model.bin'
     torch.save(model_to_save.state_dict(), str(output_model_file))
 
 
