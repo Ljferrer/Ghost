@@ -208,11 +208,14 @@ def create_instances_from_document(
                 assert len(tokens_a) >= 1
                 assert len(tokens_b) >= 1
 
-                # NOTE: [SEP] tokens are added during data cleaning step
+                # NOTE: [SEP] tokens are added after each line during data cleaning step,
+                #       but they may have been truncated
+                tokens_a = tokens_a + ['[SEP]'] if '[SEP]' not in tokens_a[-1] else tokens_a
+                tokens_b = tokens_b + ['[SEP]'] if '[SEP]' not in tokens_b[-1] else tokens_b
                 tokens = ["[CLS]"] + tokens_a + tokens_b
-                # The segment IDs are 0 for the [CLS] token, the A tokens and the first [SEP]
-                # They are 1 for the B tokens and the final [SEP]
-                segment_ids = [0 for _ in range(len(tokens_a) + 2)] + [1 for _ in range(len(tokens_b) + 1)]
+                # Range +1 [CLS] token
+                segment_ids = [0 for _ in range(len(tokens_a) + 1)] + [1 for _ in range(len(tokens_b))]
+                assert len(tokens) == len(segment_ids), 'Len mismatch'
 
                 tokens, masked_lm_positions, masked_lm_labels = create_masked_lm_predictions(
                     tokens, masked_lm_prob, max_predictions_per_seq, vocab_list)
