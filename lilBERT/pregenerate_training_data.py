@@ -140,7 +140,8 @@ def create_instances_from_document(
     (rather than each document) has an equal chance of being sampled as a false example for the NextSentence task."""
     document = doc_database[doc_idx]
     # Account for [CLS] ([SEP] tokens were already added between each line)
-    max_num_tokens = max_seq_length - 1
+    max_num_tokens = max_seq_length - 3
+    # Sometimes [SEP] can be double truncated so 3 is necessary
     # NOTE: tokens_a and tokens_b come from different sections
 
     # We *usually* want to fill up the entire sequence since we are padding

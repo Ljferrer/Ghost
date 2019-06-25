@@ -29,7 +29,7 @@ def convert_example_to_features(example, tokenizer, max_seq_length):
     masked_lm_positions = example["masked_lm_positions"]
     masked_lm_labels = example["masked_lm_labels"]
 
-    assert len(tokens) == len(segment_ids) <= max_seq_length  # The preprocessed data should be already truncated
+    assert len(tokens) == len(segment_ids) <= max_seq_length, f'Tokens: {len(tokens)} SegIDs: {len(segment_ids)}'
     input_ids = tokenizer.convert_tokens_to_ids(tokens)
     masked_label_ids = tokenizer.convert_tokens_to_ids(masked_lm_labels)
 
