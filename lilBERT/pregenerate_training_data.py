@@ -139,8 +139,9 @@ def create_instances_from_document(
     Also, documents are sampled proportionally to the number of sentences they contain, which means each sentence
     (rather than each document) has an equal chance of being sampled as a false example for the NextSentence task."""
     document = doc_database[doc_idx]
-    # Account for [CLS], [SEP], [SEP]
-    max_num_tokens = max_seq_length - 3
+    # Account for [CLS] ([SEP] tokens were already added between each line)
+    max_num_tokens = max_seq_length - 1
+    # NOTE: tokens_a and tokens_b come from different sections
 
     # We *usually* want to fill up the entire sequence since we are padding
     # to `max_seq_length` anyways, so short sequences are generally wasted
@@ -151,7 +152,7 @@ def create_instances_from_document(
     # `max_seq_length` is a hard limit.
     target_seq_length = max_num_tokens
     if random() < short_seq_prob:
-        target_seq_length = randint(2, max_num_tokens)
+        target_seq_length = randint(10, max_num_tokens)     # Higher min seq len for higher short seq prob
 
     # We DON'T just concatenate all of the tokens from a document into a long
     # sequence and choose an arbitrary split point because this would make the
@@ -207,7 +208,8 @@ def create_instances_from_document(
                 assert len(tokens_a) >= 1
                 assert len(tokens_b) >= 1
 
-                tokens = ["[CLS]"] + tokens_a + ["[SEP]"] + tokens_b + ["[SEP]"]
+                # NOTE: [SEP] tokens are added during data cleaning step
+                tokens = ["[CLS]"] + tokens_a + tokens_b
                 # The segment IDs are 0 for the [CLS] token, the A tokens and the first [SEP]
                 # They are 1 for the B tokens and the final [SEP]
                 segment_ids = [0 for _ in range(len(tokens_a) + 2)] + [1 for _ in range(len(tokens_b) + 1)]

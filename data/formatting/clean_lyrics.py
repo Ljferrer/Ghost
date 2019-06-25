@@ -68,7 +68,7 @@ def main():
                     with open(dev_file, 'a') as df:
                         for section in formatted_song['sections']:
                             for l in section:
-                                df.write(f'{l}\n')
+                                df.write(f'{l} [SEP] \n')
                             df.write('\n')  # Double newline between sections
 
                 # 5% to test
@@ -76,7 +76,7 @@ def main():
                     with open(test_file, 'a') as tef:
                         for section in formatted_song['sections']:
                             for l in section:
-                                tef.write(f'{l}\n')
+                                tef.write(f'{l} [SEP] \n')
                             tef.write('\n')
 
                 # 90% to train
@@ -84,7 +84,7 @@ def main():
                     with open(train_file, 'a') as trf:
                         for section in formatted_song['sections']:
                             for l in section:
-                                trf.write(f'{l}\n')
+                                trf.write(f'{l} [SEP] \n')
                             trf.write('\n')
 
             # Record progress
