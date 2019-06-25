@@ -54,7 +54,8 @@ def convert_example_to_features(example, tokenizer, max_seq_length):
 
 
 class PregeneratedDataset(Dataset):
-    def __init__(self, training_path, epoch, tokenizer, num_data_epochs, reduce_memory=False):
+    def __init__(self, training_path, epoch, tokenizer, num_data_epochs, train_or_dev,
+                 reduce_memory=False):
         self.vocab = tokenizer.vocab
         self.tokenizer = tokenizer
         self.epoch = epoch
@@ -87,7 +88,7 @@ class PregeneratedDataset(Dataset):
             segment_ids = np.zeros(shape=(num_samples, seq_len), dtype=np.bool)
             lm_label_ids = np.full(shape=(num_samples, seq_len), dtype=np.int32, fill_value=-1)
             is_nexts = np.zeros(shape=(num_samples,), dtype=np.bool)
-        logging.info(f"Loading training examples for epoch {epoch}")
+        logging.info(f"Loading {train_or_dev} examples for epoch {epoch}")
         with data_file.open() as f:
             for i, line in enumerate(tqdm(f, total=num_samples, desc="Training examples")):
                 line = line.strip()
@@ -121,7 +122,8 @@ class PregeneratedDataset(Dataset):
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('--pregenerated_data', type=Path, required=True)
+    parser.add_argument('--pregenerated_training_data', type=Path, required=True)
+    parser.add_argument('--pregenerated_dev_data', type=Path, required=True)
     parser.add_argument('--output_dir', type=Path, required=True)
     parser.add_argument("--bert_model", type=str, required=True, help="Bert pre-trained model selected in the list: bert-base-uncased, "
                              "bert-large-uncased, bert-base-cased, bert-base-multilingual, bert-base-chinese.")
@@ -168,13 +170,13 @@ def main():
                         help="random seed for initialization")
     args = parser.parse_args()
 
-    assert args.pregenerated_data.is_dir(), \
-        "--pregenerated_data should point to the folder of files made by pregenerate_training_data.py!"
+    assert args.pregenerated_training_data.is_dir(), \
+        "--pregenerated_training_data should point to the folder of files made by pregenerate_training_data.py!"
 
     samples_per_epoch = []
     for i in range(args.epochs):
-        epoch_file = args.pregenerated_data / f"epoch_{i}.json"
-        metrics_file = args.pregenerated_data / f"epoch_{i}_metrics.json"
+        epoch_file = args.pregenerated_training_data / f"epoch_{i}.json"
+        metrics_file = args.pregenerated_training_data / f"epoch_{i}_metrics.json"
         if epoch_file.is_file() and metrics_file.is_file():
             metrics = json.loads(metrics_file.read_text())
             samples_per_epoch.append(metrics['num_training_examples'])
@@ -276,15 +278,22 @@ def main():
                              warmup=args.warmup_proportion,
                              t_total=num_train_optimization_steps)
 
+    # Track loss
+    train_loss_history = list()
+    dev_loss_history = list()
+
+    # Start training
     global_step = 0
     logging.info("***** Running training *****")
     logging.info(f"  Num examples = {total_train_examples}")
-    logging.info("  Batch size = %d", args.train_batch_size)
-    logging.info("  Num steps = %d", num_train_optimization_steps)
-    model.train()
+    logging.info(f"  Batch size = {args.train_batch_size}")
+    logging.info(f"  Num steps = {num_train_optimization_steps} \n")
     for epoch in range(args.epochs):
-        epoch_dataset = PregeneratedDataset(epoch=epoch, training_path=args.pregenerated_data, tokenizer=tokenizer,
-                                            num_data_epochs=num_data_epochs, reduce_memory=args.reduce_memory)
+        # Train model
+        model.train()
+        epoch_dataset = PregeneratedDataset(epoch=epoch, training_path=args.pregenerated_training_data,
+                                            tokenizer=tokenizer, num_data_epochs=num_data_epochs,
+                                            train_or_dev='train', reduce_memory=args.reduce_memory)
         if args.local_rank == -1:
             train_sampler = RandomSampler(epoch_dataset)
         else:
@@ -292,13 +301,13 @@ def main():
         train_dataloader = DataLoader(epoch_dataset, sampler=train_sampler, batch_size=args.train_batch_size)
         tr_loss = 0
         nb_tr_examples, nb_tr_steps = 0, 0
-        with tqdm(total=len(train_dataloader), desc=f"Epoch {epoch}") as pbar:
+        with tqdm(total=len(train_dataloader), desc=f"Epoch {epoch}") as train_pbar:
             for step, batch in enumerate(train_dataloader):
                 batch = tuple(t.to(device) for t in batch)
                 input_ids, input_mask, segment_ids, lm_label_ids, is_next = batch
                 loss = model(input_ids, segment_ids, input_mask, lm_label_ids, is_next)
                 if n_gpu > 1:
-                    loss = loss.mean() # mean() to average on multi-gpu.
+                    loss = loss.mean()  # mean() to average on multi-gpu.
                 if args.gradient_accumulation_steps > 1:
                     loss = loss / args.gradient_accumulation_steps
                 if args.fp16:
@@ -308,9 +317,11 @@ def main():
                 tr_loss += loss.item()
                 nb_tr_examples += input_ids.size(0)
                 nb_tr_steps += 1
-                pbar.update(1)
-                mean_loss = tr_loss * args.gradient_accumulation_steps / nb_tr_steps
-                pbar.set_postfix_str(f"Loss: {mean_loss:.5f}")
+                train_pbar.update(1)
+                mean_train_loss = tr_loss * args.gradient_accumulation_steps / nb_tr_steps
+                if step % 10 == 0:
+                    train_loss_history.append((epoch, mean_train_loss))
+                train_pbar.set_postfix_str(f"Loss: {mean_train_loss:.5f}")
                 if (step + 1) % args.gradient_accumulation_steps == 0:
                     if args.fp16:
                         # modify learning rate with special warm up BERT uses
@@ -322,10 +333,55 @@ def main():
                     optimizer.zero_grad()
                     global_step += 1
 
+        # Evaluate dev loss
+        model.eval()
+        dev_dataset = PregeneratedDataset(epoch=epoch, training_path=args.pregenerated_dev_data,
+                                          tokenizer=tokenizer, num_data_epochs=num_data_epochs,
+                                          train_or_dev='dev', reduce_memory=args.reduce_memory)
+        if args.local_rank == -1:
+            train_sampler = RandomSampler(dev_dataset)
+        else:
+            train_sampler = DistributedSampler(dev_dataset)
+        dev_dataloader = DataLoader(dev_dataset, sampler=train_sampler, batch_size=args.train_batch_size)
+        dev_loss = 0
+        nb_dev_examples, nb_dev_steps = 0, 0
+        with tqdm(total=len(dev_dataloader), desc=f"Epoch {epoch}") as dev_pbar:
+            for step, batch in enumerate(dev_dataloader):
+                batch = tuple(t.to(device) for t in batch)
+                input_ids, input_mask, segment_ids, lm_label_ids, is_next = batch
+                loss = model(input_ids, segment_ids, input_mask, lm_label_ids, is_next)
+                if n_gpu > 1:
+                    loss = loss.mean()  # mean() to average on multi-gpu.
+                if args.gradient_accumulation_steps > 1:
+                    loss = loss / args.gradient_accumulation_steps
+                if args.fp16:
+                    optimizer.backward(loss)
+                else:
+                    loss.backward()
+                dev_loss += loss.item()
+                nb_dev_examples += input_ids.size(0)
+                nb_dev_steps += 1
+                dev_pbar.update(1)
+                mean_dev_loss = dev_loss * args.gradient_accumulation_steps / nb_dev_steps
+                dev_pbar.set_postfix_str(f"Loss: {mean_dev_loss:.5f}")
+        dev_loss_history.append((epoch, mean_dev_loss))     # Only collect final mean dev loss
+
+        if epoch % 5 == 0:
+            # TODO: Print loss trajectory
+
+            # Save progress
+            logging.info("** ** * Saving model progress * ** ** \n")
+            output_model_file = args.output_dir / f"{epoch}_model.bin"
+            torch.save({'epoch': epoch,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict(),
+                        'loss': tr_loss,
+                        }, str(output_model_file))
+
     # Save a trained model
-    logging.info("** ** * Saving fine-tuned model ** ** * ")
+    logging.info("** ** * Saving fine-tuned model * ** ** ")
     model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
-    output_model_file = args.output_dir / "pytorch_model.bin"
+    output_model_file = args.output_dir / "final_model.bin"
     torch.save(model_to_save.state_dict(), str(output_model_file))
 
 
