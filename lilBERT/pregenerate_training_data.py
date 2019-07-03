@@ -120,10 +120,11 @@ def create_masked_lm_predictions(tokens, masked_lm_prob, max_predictions_per_seq
     num_to_mask = min(max_predictions_per_seq,
                       max(1, int(round(len(tokens) * masked_lm_prob))))
 
-    # Sample both 50/50
+    # Sample both 40/60
     shuffle(last_indices), shuffle(cand_indices)
-    mask_indices = sample(last_indices, int(num_to_mask/2))
-    mask_indices.extend(sample(cand_indices, int(num_to_mask/2)))
+    # Do not sample more than len(indices)
+    mask_indices = sample(last_indices, min(int(num_to_mask * 0.4), len(last_indices)))
+    mask_indices.extend(sample(cand_indices, min(int(num_to_mask * 0.6), len(cand_indices))))
     mask_indices.sort()
 
     masked_token_labels = list()
