@@ -82,7 +82,7 @@ class DocumentDatabase:
 
 
 def truncate_seq_pair(tokens_a, tokens_b, max_num_tokens):
-    '''Truncates a pair of sequences to a maximum sequence length. Lifted from Google's BERT repo.'''
+    """Truncates a pair of sequences to a maximum sequence length. Lifted from Google's BERT repo."""
     while True:
         total_length = len(tokens_a) + len(tokens_b)
         if total_length <= max_num_tokens:
@@ -100,19 +100,33 @@ def truncate_seq_pair(tokens_a, tokens_b, max_num_tokens):
 
 
 def create_masked_lm_predictions(tokens, masked_lm_prob, max_predictions_per_seq, vocab_list):
-    '''Creates the predictions for the masked LM objective. This is mostly copied from the Google BERT repo, but
-    with several refactors to clean it up and remove a lot of unnecessary variables.'''
-    cand_indices = []
-    for (i, token) in enumerate(tokens):
-        if token == '[CLS]' or token == '[SEP]':
+    """Creates the predictions for the masked LM objective. This is mostly copied from the Google BERT repo, but
+    with several refactors to clean it up and remove a lot of unnecessary variables."""
+    cand_indices = list()
+    last_indices = list()
+    for i, token in enumerate(tokens):
+        if token == '[CLS]':
             continue
-        cand_indices.append(i)
+        elif token == '[SEP]':
+            last_indices.append(i-1)
+        else:
+            cand_indices.append(i)
+
+    # Delete copies from cand_indices
+    for i in last_indices:
+        if i in cand_indices:
+            cand_indices.pop(cand_indices.index(i))
 
     num_to_mask = min(max_predictions_per_seq,
                       max(1, int(round(len(tokens) * masked_lm_prob))))
-    shuffle(cand_indices)
-    mask_indices = sorted(sample(cand_indices, num_to_mask))
-    masked_token_labels = []
+
+    # Sample both 50/50
+    shuffle(last_indices), shuffle(cand_indices)
+    mask_indices = sample(last_indices, int(num_to_mask/2))
+    mask_indices.extend(sample(cand_indices, int(num_to_mask/2)))
+    mask_indices.sort()
+
+    masked_token_labels = list()
     for index in mask_indices:
         # 80% of the time, replace with [MASK]
         if random() < 0.8:
@@ -134,10 +148,10 @@ def create_masked_lm_predictions(tokens, masked_lm_prob, max_predictions_per_seq
 def create_instances_from_document(
         doc_database, doc_idx, max_seq_length, short_seq_prob,
         masked_lm_prob, max_predictions_per_seq, vocab_list):
-    '''This code is mostly a duplicate of the equivalent function from Google BERT's repo.
+    """This code is mostly a duplicate of the equivalent function from Google BERT's repo.
     However, we make some changes and improvements. Sampling is improved and no longer requires a loop in this function.
     Also, documents are sampled proportionally to the number of sentences they contain, which means each sentence
-    (rather than each document) has an equal chance of being sampled as a false example for the NextSentence task.'''
+    (rather than each document) has an equal chance of being sampled as a false example for the NextSentence task."""
     document = doc_database[doc_idx]
     # Account for [CLS] ([SEP] tokens were already added between each line)
     max_num_tokens = max_seq_length - 3
