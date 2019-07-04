@@ -367,17 +367,14 @@ def main():
                 dev_pbar.set_postfix_str(f'Loss: {mean_dev_loss:.5f}')
         dev_loss_history.append((epoch, mean_dev_loss))     # Only collect final mean dev loss
 
-        if epoch % 3 == 0:
-            # TODO: Print loss trajectory
-
-            # Save progress
-            logging.info('** ** * Saving model progress * ** ** \n')
-            output_model_file = args.output_dir / f'{epoch}_model.bin'
-            torch.save({'epoch': epoch,
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict(),
-                        'loss': tr_loss,
-                        }, str(output_model_file))
+        # Save progress
+        logging.info('** ** * Saving model progress * ** ** \n')
+        output_model_file = args.output_dir / f'{epoch}_model.bin'
+        torch.save({'epoch': epoch,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'loss': tr_loss,
+                    }, str(output_model_file))
 
     # Save loss history
     with open(args.output_dir / 'loss_history.json', 'a') as h:
