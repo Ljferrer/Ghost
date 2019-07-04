@@ -367,30 +367,32 @@ def main():
                 dev_pbar.set_postfix_str(f'Loss: {mean_dev_loss:.5f}')
         dev_loss_history.append((epoch, mean_dev_loss))     # Only collect final mean dev loss
 
-        # Save progress
-        logging.info('** ** * Saving model progress * ** ** \n')
-        output_model_file = args.output_dir / f'{epoch}_model.bin'
+        # Save training progress with optimizer
+        logging.info('** ** * Saving training progress * ** **')
+        Path(args.output_dir / f'{epoch}/').mkdir(exist_ok=True)
+
+        output_model_file = args.output_dir / f'{epoch}/model_and_opt.bin'
         torch.save({'epoch': epoch,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': tr_loss,
                     }, str(output_model_file))
 
-    # Save loss history
-    with open(args.output_dir / 'loss_history.json', 'a') as h:
-        hist = {'dev': dev_loss_history, 'train': train_loss_history}
-        h.write(f'{json.dumps(hist)}\n')
+        # Save easily-loadable model module
+        logging.info(f'** ** * Saving fine-tuned model {epoch} * ** ** \n')
+        model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
 
-    # Save a trained model
-    logging.info('** ** * Saving fine-tuned model * ** ** ')
-    model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
+        output_model_file = args.output_dir / f'{epoch}/{WEIGHTS_NAME}'
+        output_config_file = args.output_dir / f'{epoch}/{CONFIG_NAME}'
 
-    output_model_file = args.output_dir / WEIGHTS_NAME
-    output_config_file = args.output_dir / CONFIG_NAME
+        torch.save(model_to_save.state_dict(), str(output_model_file))
+        model_to_save.config.to_json_file(str(output_config_file))
+        tokenizer.save_vocabulary(args.output_dir)
 
-    torch.save(model_to_save.state_dict(), str(output_model_file))
-    model_to_save.config.to_json_file(str(output_config_file))
-    tokenizer.save_vocabulary(args.output_dir)
+        # Save loss history after every epoch
+        with open(args.output_dir / f'{epoch}/loss_history.json', 'a') as h:
+            hist = {'dev': dev_loss_history, 'train': train_loss_history}
+            h.write(f'{json.dumps(hist)}\n')
 
 
 if __name__ == '__main__':
